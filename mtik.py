@@ -1,9 +1,9 @@
-import sys
-import requests
+import base64
 import tkinter as tk
 from tkinter import ttk, messagebox
-import json
-import base64
+from requests import *
+
+
 
 class MikroTikLogin:
     def __init__(self, root):
@@ -27,9 +27,12 @@ class MikroTikLogin:
         self.login_button.pack(pady=5)
     
     def login(self):
-        ip = self.ip_input.get().strip()
-        user = self.user_input.get().strip()
-        password = self.pass_input.get().strip()
+        #ip = self.ip_input.get().strip()
+        #user = self.user_input.get().strip()
+        #password = self.pass_input.get().strip()
+        ip= "10.20.30.1"
+        user="admin"
+        password="ubuntu123"
         
         if not ip or not user or not password:
             messagebox.showwarning("Input Error", "Please fill in all fields.")
@@ -37,13 +40,13 @@ class MikroTikLogin:
         
         url = f"http://{ip}/rest/interface"
         try:
-            response = requests.get(url, auth=(user, password), timeout=5)
+            response = get(url, auth=(user, password), timeout=5)
             if response.status_code == 200:
                 self.root.destroy()
                 NetworkAdmin(ip, user, password)
             else:
                 messagebox.showerror("Login Failed", f"Error: {response.status_code}\n{response.text}")
-        except requests.exceptions.RequestException as e:
+        except exceptions.RequestException as e:
             messagebox.showerror("Connection Error", f"{str(e)}")
 
 class NetworkAdmin:
@@ -130,7 +133,7 @@ class InterfacesWindow:
             headers = {'Authorization': f'Basic {auth}'}
             
             # Get all interfaces
-            response = requests.get(url, headers=headers, verify=False)
+            response = get(url, headers=headers, verify=False)
             response.raise_for_status()
             interfaces = response.json()
 
@@ -142,7 +145,7 @@ class InterfacesWindow:
                 interface_info = f"ID: {interface['.id']} | {interface['name']} | Disabled: {interface['disabled']}"
                 self.all_listbox.insert(tk.END, interface_info)
 
-        except requests.exceptions.RequestException as e:
+        except exceptions.RequestException as e:
             messagebox.showerror("Error", f"{e}", parent=self.interface_window_frame)
 
     def load_interfaces_wireless(self):
@@ -152,7 +155,7 @@ class InterfacesWindow:
             headers = {'Authorization': f'Basic {auth}'}
             
             # Get all interfaces
-            response = requests.get(url, headers=headers, verify=False)
+            response = get(url, headers=headers, verify=False)
             response.raise_for_status()
             interfaces = response.json()
 
@@ -165,8 +168,8 @@ class InterfacesWindow:
                     interface_info = f"ID: {interface['.id']} | {interface['name']} | Disabled: {interface['disabled']}"
                     self.wireless_listbox.insert(tk.END, interface_info)
 
-        except requests.exceptions.RequestException as e:
-            messagebox.showerror("Error", f"{e}", parent=self.interface_window)
+        except exceptions.RequestException as e:
+            messagebox.showerror("Error", f"{e}", parent=self.interface_window_frame)
 
     def on_double_click(self, event):
         selected_index = self.all_listbox.curselection() or self.wireless_listbox.curselection()
@@ -198,12 +201,12 @@ class InterfacesWindow:
         data = {".id": interface_id, "disabled": disable}
         
         try:
-            response = requests.post(url, headers=headers, json=data, verify=False)
+            response = post(url, headers=headers, json=data, verify=False)
             response.raise_for_status()
             messagebox.showinfo("Success", "Interface updated successfully!", parent=self.interface_window_frame)
             self.load_interfaces()
             self.load_interfaces_wireless()  # Reload both interfaces after update
-        except requests.exceptions.RequestException as e:
+        except exceptions.RequestException as e:
             messagebox.showerror("Error", f"{e}", parent=self.interface_window_frame)
 
 # DNS window placeholder
