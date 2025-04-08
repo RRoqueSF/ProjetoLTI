@@ -1,5 +1,6 @@
 import sys
 from DNS import *
+from DHCP import *
 import requests
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
@@ -80,6 +81,10 @@ class NetworkAdmin:
         self.menu_button_dns = ttk.Button(self.menu_frame, text="DNS Management", command=self.show_dns_window)
         self.menu_button_dns.pack(pady=10, fill=tk.X)
 
+        self.menu_button_dhcp = ttk.Button(self.menu_frame, text="DHCP Management", command=self.show_dhcp_window)
+        self.menu_button_dhcp.pack(pady=10, fill=tk.X)
+
+
          # Add Security Profiles button to the side menu
         self.menu_button_security = ttk.Button(self.menu_frame, text="Security Profiles", command=self.show_security_profiles_window)
         self.menu_button_security.pack(pady=10, fill=tk.X)
@@ -100,6 +105,13 @@ class NetworkAdmin:
         for widget in self.content_frame.winfo_children():
             widget.destroy()  # Clear previous content
         DNSWindow(self.ip, self.user, self.password, self.content_frame)
+
+
+    def show_dhcp_window(self):
+        for widget in self.content_frame.winfo_children():
+            widget.destroy()
+        DHCPWindow(self.ip, self.user, self.password, self.content_frame)
+
 
 class InterfacesWindow:
     def __init__(self, ip, user, password, parent_frame):
