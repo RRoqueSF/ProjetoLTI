@@ -630,7 +630,7 @@ class SecurityProfilesWindow:
 
     # MAC Authentication checkbox
         mac_auth_var = tk.BooleanVar()
-        mac_checkbox = ttk.Checkbutton(content, text="Disable MAC Authentication", variable=mac_auth_var)
+        mac_checkbox = ttk.Checkbutton(content, text="MAC Authentication", variable=mac_auth_var)
         mac_checkbox.grid(row=3, column=0, columnspan=2, sticky="w", pady=5)
 
         def submit():
@@ -641,6 +641,10 @@ class SecurityProfilesWindow:
 
             if not name_valor or not password_valor:
                 messagebox.showwarning("Campos obrigatórios", "Preencha todos os campos.")
+                return
+
+            if not 8 <= len(password_valor) <= 64:
+                messagebox.showwarning("Senha inválida", "A chave WPA2 deve ter entre 8 e 64 caracteres.")
                 return
 
             data = {
@@ -665,7 +669,7 @@ class SecurityProfilesWindow:
                 url = f"https://{self.ip}/rest/interface/wireless/security-profiles/add"
                 auth = base64.b64encode(f"{self.user}:{self.password}".encode()).decode("utf-8")
                 headers = {'Authorization': f'Basic {auth}', 'Content-Type': 'application/json'}
-                response = requests.post(url, headers=headers, json=(data), verify=False)
+                response = requests.post(url, headers=headers, json=data, verify=False)
                 response.raise_for_status()
                 self.load_security_profiles()
                 messagebox.showinfo("Sucesso", "Perfil de segurança criado com sucesso.")
@@ -678,39 +682,6 @@ class SecurityProfilesWindow:
         popup.transient(self.security_window_frame)
         popup.grab_set()
         popup.wait_window()
-
-    def edit_security_profile_popup(self):
-        selected_index = self.security_profiles_listbox.curselection()
-        if not selected_index:
-            messagebox.showwarning("Select Profile", "Please select a security profile to edit.")
-            return
-        
-        selected_text = self.security_profiles_listbox.get(selected_index)
-        selected_id = selected_text.split(" | ")[0].split(":")[1].strip()
-        
-        # Collect new details for the selected profile
-        name = simpledialog.askstring("Edit Security Profile", "Enter new Profile Name:", parent=self.security_window_frame)
-        encryption = simpledialog.askstring("Edit Security Profile", "Enter new Encryption Type:", parent=self.security_window_frame)
-        wpa2_key = simpledialog.askstring("Edit Security Profile", "Enter new WPA2 Pre-Shared Key:", parent=self.security_window_frame)
-        
-        if name and encryption and wpa2_key:
-            try:
-                url = f"https://{self.ip}/rest/interface/wireless/security-profile/{selected_id}"
-                data = {
-                    "name": name,
-                    "encryption": encryption,
-                    "wpa2-pre-shared-key": wpa2_key
-                }
-                auth = base64.b64encode(f"{self.user}:{self.password}".encode()).decode("utf-8")
-                headers = {'Authorization': f'Basic {auth}', 'Content-Type': 'application/json'}
-                response = requests.put(url, headers=headers, data=json.dumps(data), verify=False)
-                response.raise_for_status()
-                self.load_security_profiles()  # Refresh the list
-                messagebox.showinfo("Success", "Security profile updated successfully.")
-            except requests.exceptions.RequestException as e:
-                messagebox.showerror("Error", f"{e}", parent=self.security_window_frame)
-
-
 
     def edit_security_profile_popup(self):
         selected_item = self.security_profiles_tree.selection()
@@ -768,6 +739,11 @@ class SecurityProfilesWindow:
             if not name_valor or not password_valor:
                 messagebox.showwarning("Campos obrigatórios", "Preencha todos os campos.")
                 return
+
+            if not 8 <= len(password_valor) <= 64:
+                messagebox.showwarning("Senha inválida", "A chave WPA2 deve ter entre 8 e 64 caracteres.")
+                return
+
 
             data = {
                 "name": name_valor,
