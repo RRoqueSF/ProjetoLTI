@@ -741,6 +741,11 @@ class SecurityProfilesWindow:
                 messagebox.showwarning("Campos obrigatórios", "Preencha todos os campos.")
                 return
 
+            if not 8 <= len(password_valor) <= 64:
+                messagebox.showwarning("Senha inválida", "A chave WPA2 deve ter entre 8 e 64 caracteres.")
+                return
+
+
             data = {
                 "name": name_valor,
                 "wpa2-pre-shared-key": password_valor,
