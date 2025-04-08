@@ -1,4 +1,5 @@
 import sys
+from DNS import *
 import requests
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
@@ -830,13 +831,7 @@ class SecurityProfilesWindow:
                 ["ID", "Name", "Encryption", "WPA2 Key", "PMKID", "MAC Auth", "WPA3"], selected_profile))
             messagebox.showinfo("Security Profile Info", profile_info, parent=self.security_window_frame)
 
-# DNS window placeholder
-class DNSWindow:
-    def __init__(self, ip, user, password, parent_frame):
-        self.dns_window_frame = tk.Frame(parent_frame, bg="white")
-        self.dns_window_frame.pack(fill=tk.BOTH, expand=True)
-        label = ttk.Label(self.dns_window_frame, text="DNS Management Feature (Coming Soon)", font=("Arial", 14))
-        label.pack(pady=20)
+
 
 if __name__ == "__main__":
     root = tk.Tk()
