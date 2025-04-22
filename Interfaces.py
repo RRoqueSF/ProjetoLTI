@@ -61,6 +61,11 @@ class InterfacesWindow:
                                                                                                self.wireless_interfaces_frame))
         self.wireless_deactivate_button.pack(side=tk.LEFT, padx=5)
 
+        # Add this after the wireless_deactivate_button
+        self.wireless_configure_button = ttk.Button(self.wireless_buttons_frame, text="Configure",
+                                                    command=self.configure_wireless)
+        self.wireless_configure_button.pack(side=tk.LEFT, padx=5)
+
         # --- Bridge Interfaces Tab ---
         self.bridge_listbox = tk.Listbox(self.bridge_interfaces_frame, width=60, height=10)
         self.bridge_listbox.pack(pady=5)
@@ -464,3 +469,232 @@ class InterfacesWindow:
         if selected:
             item = self.bridge_listbox.get(selected)
             messagebox.showinfo("Bridge Info", item, parent=self.bridge_interfaces_frame)
+
+    def configure_wireless(self):
+        selected = self.wireless_listbox.curselection()
+        if not selected:
+            messagebox.showerror("Error", "Select a wireless interface to configure!",
+                                 parent=self.wireless_interfaces_frame)
+            return
+
+        item = self.wireless_listbox.get(selected)
+        interface_id = item.split("ID: ")[1].split(" | ")[0].strip()
+        interface_name = item.split(" | ")[1].strip()
+
+        # Get current wireless settings
+        try:
+            authorization = base64.b64encode(f"{self.user}:{self.password}".encode()).decode("utf-8")
+            url = f"https://{self.ip}/rest/interface/wireless"
+            headers = {'Authorization': f'Basic {authorization}'}
+            response = requests.get(url, headers=headers, verify=False)
+            response.raise_for_status()
+            wireless_interfaces = response.json()
+
+            # Find this specific interface
+            wireless_data = None
+            for wiface in wireless_interfaces:
+                if wiface.get('.id') == interface_id or wiface.get('name') == interface_name:
+                    wireless_data = wiface
+                    break
+
+            if not wireless_data:
+                messagebox.showerror("Error", f"Could not find wireless configuration for {interface_name}!",
+                                     parent=self.wireless_interfaces_frame)
+                return
+
+            # Get security profiles if available
+            security_profiles = []
+            try:
+                url = f"https://{self.ip}/rest/interface/wireless/security-profiles"
+                response = requests.get(url, headers=headers, verify=False)
+                response.raise_for_status()
+                security_profiles = response.json()
+            except:
+                pass
+
+        except requests.exceptions.RequestException as e:
+            messagebox.showerror("Error", f"{e}", parent=self.wireless_interfaces_frame)
+            return
+
+        # Create configuration popup
+        popup = tk.Toplevel(self.interface_window_frame)
+        popup.title(f"Configure Wireless Interface: {interface_name}")
+        popup.geometry("650x550")
+
+        # Create a frame with scrollbar
+        main_frame = tk.Frame(popup)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Basic settings
+        tk.Label(scrollable_frame, text="Basic Settings", font=("Arial", 12, "bold")).grid(
+            row=0, column=0, columnspan=3, sticky="w", pady=(10, 5))
+
+        # Row 1 - SSID
+        tk.Label(scrollable_frame, text="SSID:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        ssid_entry = tk.Entry(scrollable_frame, width=30)
+        ssid_entry.grid(row=1, column=1, sticky="w", padx=5, pady=5)
+        ssid_entry.insert(0, wireless_data.get("ssid", ""))
+
+        # Row 2 - Mode
+        tk.Label(scrollable_frame, text="Mode:").grid(row=2, column=0, sticky="w", padx=5, pady=5)
+        mode_values = ["ap", "station", "station-wds", "station-pseudobridge", "wds-slave", "bridge"]
+        mode_combo = ttk.Combobox(scrollable_frame, values=mode_values, state="readonly", width=27)
+        mode_combo.grid(row=2, column=1, sticky="w", padx=5, pady=5)
+        mode_combo.set(wireless_data.get("mode", "ap"))
+
+        # Row 3 - Band
+        tk.Label(scrollable_frame, text="Band:").grid(row=3, column=0, sticky="w", padx=5, pady=5)
+        band_values = ["2ghz-b/g/n", "5ghz-a/n/ac", "2ghz-onlyn", "5ghz-onlyn", "5ghz-onlyac"]
+        band_combo = ttk.Combobox(scrollable_frame, values=band_values, state="readonly", width=27)
+        band_combo.grid(row=3, column=1, sticky="w", padx=5, pady=5)
+        band_combo.set(wireless_data.get("band", "2ghz-b/g/n"))
+
+        # Row 4 - Channel Width
+        tk.Label(scrollable_frame, text="Channel Width:").grid(row=4, column=0, sticky="w", padx=5, pady=5)
+        width_values = ["20MHz", "20/40MHz", "20/40/80MHz"]
+        width_combo = ttk.Combobox(scrollable_frame, values=width_values, state="readonly", width=27)
+        width_combo.grid(row=4, column=1, sticky="w", padx=5, pady=5)
+        width_combo.set(wireless_data.get("channel-width", "20MHz"))
+
+        # Row 5 - Frequency
+        tk.Label(scrollable_frame, text="Frequency:").grid(row=5, column=0, sticky="w", padx=5, pady=5)
+        frequency_entry = tk.Entry(scrollable_frame, width=30)
+        frequency_entry.grid(row=5, column=1, sticky="w", padx=5, pady=5)
+        frequency_entry.insert(0, wireless_data.get("frequency", "auto"))
+
+        # Security settings
+        tk.Label(scrollable_frame, text="Security Settings", font=("Arial", 12, "bold")).grid(
+            row=6, column=0, columnspan=3, sticky="w", pady=(20, 5))
+
+        # Row 7 - Security Profile
+        tk.Label(scrollable_frame, text="Security Profile:").grid(row=7, column=0, sticky="w", padx=5, pady=5)
+        security_profile_names = [profile.get('name', 'default') for profile in security_profiles]
+        security_combo = ttk.Combobox(scrollable_frame, values=security_profile_names, state="readonly", width=27)
+        security_combo.grid(row=7, column=1, sticky="w", padx=5, pady=5)
+        security_combo.set(wireless_data.get("security-profile", "default"))
+
+        # Row 8 - Create New Profile button
+        def create_security_profile():
+            profile_popup = tk.Toplevel(popup)
+            profile_popup.title("Create Security Profile")
+            profile_popup.geometry("400x300")
+
+            # Add form elements for creating a new security profile
+            # (implementation depends on your specific requirements)
+
+        ttk.Button(scrollable_frame, text="New Profile", command=create_security_profile).grid(
+            row=7, column=2, sticky="w", padx=5, pady=5)
+
+        # Advanced settings
+        tk.Label(scrollable_frame, text="Advanced Settings", font=("Arial", 12, "bold")).grid(
+            row=8, column=0, columnspan=3, sticky="w", pady=(20, 5))
+
+        # Row 9 - TX Power
+        tk.Label(scrollable_frame, text="TX Power (dBm):").grid(row=9, column=0, sticky="w", padx=5, pady=5)
+        tx_power_entry = tk.Entry(scrollable_frame, width=30)
+        tx_power_entry.grid(row=9, column=1, sticky="w", padx=5, pady=5)
+        tx_power_entry.insert(0, wireless_data.get("tx-power", ""))
+
+        # Row 10 - Disabled checkbox
+        disabled_var = tk.BooleanVar(value=wireless_data.get("disabled", False))
+        tk.Checkbutton(scrollable_frame, text="Disabled", variable=disabled_var).grid(
+            row=10, column=0, sticky="w", padx=5, pady=5)
+
+        # Buttons frame at bottom
+        buttons_frame = tk.Frame(popup)
+        buttons_frame.pack(fill=tk.X, pady=10)
+
+        def save_configuration():
+            # Prepare the configuration data
+            config = {
+                ".id": interface_id,
+                "ssid": ssid_entry.get().strip(),
+                "mode": mode_combo.get(),
+                "band": band_combo.get(),
+                "channel-width": width_combo.get(),
+                "frequency": frequency_entry.get().strip(),
+                "disabled": "true" if disabled_var.get() else "false"
+            }
+
+            # Only include these fields if they have values
+            if tx_power_entry.get().strip():
+                config["tx-power"] = tx_power_entry.get().strip()
+
+            if security_combo.get() and security_combo.get() != "default":
+                config["security-profile"] = security_combo.get()
+
+            try:
+                # Encode credentials
+                auth_str = f"{self.user}:{self.password}"
+                auth_bytes = auth_str.encode('ascii')
+                auth_b64 = base64.b64encode(auth_bytes).decode('ascii')
+
+                headers = {
+                    'Authorization': f'Basic {auth_b64}',
+                    'Content-Type': 'application/json'
+                }
+
+                url = f"https://{self.ip}/rest/interface/wireless/set"
+
+                # Print the payload for debugging (remove in production)
+                print("Sending payload:", config)
+
+                # Send the request with verify=False to skip SSL verification
+                response = requests.post(
+                    url,
+                    headers=headers,
+                    json=config,
+                    verify=False,
+                    timeout=10
+                )
+
+                # Check for HTTP errors
+                response.raise_for_status()
+
+                # If we get here, the request was successful
+                messagebox.showinfo(
+                    "Success",
+                    "Wireless interface updated successfully!",
+                    parent=popup
+                )
+
+                # Refresh the interface list
+                self.load_interfaces_wireless()
+                popup.destroy()
+
+            except requests.exceptions.RequestException as e:
+                # Show detailed error message
+                error_msg = f"Failed to update interface:\n\n"
+
+                if hasattr(e, 'response') and e.response is not None:
+                    try:
+                        error_details = e.response.json()
+                        error_msg += f"API Response: {error_details}\n\n"
+                    except:
+                        error_msg += f"Response Text: {e.response.text}\n\n"
+
+                error_msg += f"Error: {str(e)}"
+
+                messagebox.showerror(
+                    "Error",
+                    error_msg,
+                    parent=popup
+                )
+
+        ttk.Button(buttons_frame, text="Save", command=save_configuration).pack(side=tk.LEFT, padx=5)
+        ttk.Button(buttons_frame, text="Cancel", command=popup.destroy).pack(side=tk.LEFT, padx=5)
