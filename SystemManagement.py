@@ -257,29 +257,27 @@ class SystemManagementWindow:
 
     def receive_ssh_output(self):
         output_buffer = ""
+        last_recv_time = time.time()
+
         while self.keep_receiving and self.ssh_shell:
             try:
                 if self.ssh_shell.recv_ready():
-                    # Read data in smaller chunks
                     output = self.ssh_shell.recv(4096).decode('utf-8', 'ignore')
+                    if output:
+                        print("RAW OUTPUT:", repr(output))  # DEBUG
+                        output_buffer += output.replace('\r\n', '\n').replace('\r', '\n')
+                        last_recv_time = time.time()
 
-                    # Combine with previous buffer and process
-                    output_buffer += output
-
-                    # Clean up special characters
-                    output_buffer = output_buffer.replace('\r\n', '\n').replace('\r', '\n')
-
-                    # Push all output to the queue immediately
+                # Force flush if waiting too long with output in buffer
+                if output_buffer and (time.time() - last_recv_time > 0.4):
                     self.ssh_output_queue.put(output_buffer)
                     output_buffer = ""
 
-                # Give more time for output to arrive
-                time.sleep(0.2)
+                time.sleep(0.1)
             except Exception as e:
                 self.ssh_output_queue.put(f"\n[SSH Error: {str(e)}]\n")
                 break
 
-        # If there's anything left in the buffer when the connection ends
         if output_buffer:
             self.ssh_output_queue.put(output_buffer)
 
@@ -328,17 +326,17 @@ class SystemManagementWindow:
             self.update_history_dropdown()
 
         try:
-            self.append_to_terminal("[admin@MikroTik] > ", "prompt")
-            self.append_to_terminal(f"{command}\n", "command")
-            self.ssh_shell.send(command + "\n")
+            self.append_to_terminal(f"{command}\n", "command")  # Only the command itself
+            self.ssh_shell.send((command + "\r\n").encode())
 
-            # Add a small delay to allow router to respond
-            time.sleep(0.5)
+
+            # Small delay gives the receive thread time to pick up output
+            time.sleep(0.2)
 
             self.command_entry.delete(0, tk.END)
         except Exception as e:
             self.append_to_terminal(f"Error executing command: {str(e)}\n", "error")
-
+            
     def clear_terminal(self):
         self.terminal_output.config(state=tk.NORMAL)
         self.terminal_output.delete(1.0, tk.END)
