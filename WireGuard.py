@@ -84,8 +84,8 @@ class WireGuardWindow:
                 for interface in response.json():
                     self.interface_tree.insert('', 'end', values=(
                         interface.get('name', ''),
-                        interface.get('private-key', '')[:10] + '...' if interface.get('private-key') else '',
-                        interface.get('public-key', '')[:10] + '...' if interface.get('public-key') else '',
+                        interface.get('private-key', ''),
+                        interface.get('public-key', ''),
                         interface.get('listen-port', ''),
                         interface.get('mtu', '')
                     ))
@@ -115,7 +115,7 @@ class WireGuardWindow:
                 for peer in response.json():
                     self.peers_tree.insert('', 'end', values=(
                         peer.get('interface', ''),
-                        peer.get('public-key', '')[:10] + '...' if peer.get('public-key') else '',
+                        peer.get('public-key', ''),
                         peer.get('allowed-address', ''),
                         peer.get('endpoint-address', '') + ':' + peer.get('endpoint-port', '') if peer.get(
                             'endpoint-address') else ''
@@ -304,7 +304,7 @@ class WireGuardWindow:
                 if response.status_code == 200:
                     peer_to_delete = None
                     for peer in response.json():
-                        if peer.get('public-key', '').startswith(peer_id.split('...')[0]):
+                        if peer.get('public-key', '') == peer_id:
                             peer_to_delete = peer.get('.id')
                             break
 

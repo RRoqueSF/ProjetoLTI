@@ -5,6 +5,13 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 class SecurityProfilesWindow:
+    """
+    A window for managing wireless security profiles.
+    
+    This class provides a user interface for viewing, creating, editing, and deleting
+    security profiles for wireless networks. It handles the display of security profile
+    information and manages API interactions for profile operations.
+    """
     def __init__(self, ip, user, password, parent_frame):
         self.ip = ip
         self.user = user
@@ -68,7 +75,7 @@ class SecurityProfilesWindow:
 
     def create_security_profile_popup(self):
         popup = tk.Toplevel(self.security_window_frame)
-        popup.title("Criar Perfil de Segurança")
+        popup.title("Create Security Profile")
         popup.geometry("400x280")
         popup.configure(bg="white")
 
@@ -76,8 +83,8 @@ class SecurityProfilesWindow:
         content.pack(fill="both", expand=True)
         content.columnconfigure(1, weight=1)
 
-        # Nome do perfil
-        ttk.Label(content, text="Nome do Perfil:").grid(row=0, column=0, sticky="w", pady=5)
+        # Profile Name
+        ttk.Label(content, text="Profile Name:").grid(row=0, column=0, sticky="w", pady=5)
         name_entry = ttk.Entry(content)
         name_entry.grid(row=0, column=1, sticky="ew", pady=5)
 
@@ -93,7 +100,7 @@ class SecurityProfilesWindow:
 
         # MAC Authentication checkbox
         mac_auth_var = tk.BooleanVar()
-        mac_checkbox = ttk.Checkbutton(content, text="Disable MAC Authentication", variable=mac_auth_var)
+        mac_checkbox = ttk.Checkbutton(content, text="MAC Authentication", variable=mac_auth_var)
         mac_checkbox.grid(row=3, column=0, columnspan=2, sticky="w", pady=5)
 
         def submit():
@@ -103,11 +110,11 @@ class SecurityProfilesWindow:
             mac_off = "yes" if mac_auth_var.get() else "no"
 
             if not name_valor or not password_valor:
-                messagebox.showwarning("Campos obrigatórios", "Preencha todos os campos.")
+                messagebox.showwarning("Required Fields", "Please fill in all fields.")
                 return
-
+            
             if not 8 <= len(password_valor) <= 64:
-                messagebox.showwarning("Senha inválida", "A chave WPA2 deve ter entre 8 e 64 caracteres.")
+                messagebox.showwarning("Invalid Password", "WPA2 key must be between 8 and 64 characters.")
                 return
 
             data = {
@@ -135,12 +142,12 @@ class SecurityProfilesWindow:
                 response = requests.post(url, headers=headers, json=(data), verify=False)
                 response.raise_for_status()
                 self.load_security_profiles()
-                messagebox.showinfo("Sucesso", "Perfil de segurança criado com sucesso.")
+                messagebox.showinfo("Success", "Security profile created successfully.")
                 popup.destroy()
             except requests.exceptions.RequestException as e:
-                messagebox.showerror("Erro", f"{e}", parent=popup)
+                messagebox.showerror("Error", f"{e}", parent=popup)
 
-        ttk.Button(content, text="Criar Perfil", command=submit).grid(row=4, column=0, columnspan=2, pady=15)
+        ttk.Button(content, text="Create Profile", command=submit).grid(row=4, column=0, columnspan=2, pady=15)
 
         popup.transient(self.security_window_frame)
         popup.grab_set()
@@ -162,7 +169,7 @@ class SecurityProfilesWindow:
         mac_auth_var = tk.BooleanVar(value=current_mac_auth)
 
         popup = tk.Toplevel(self.security_window_frame)
-        popup.title("Editar Perfil de Segurança")
+        popup.title("Edit Security Profile")
         popup.geometry("400x280")
         popup.configure(bg="white")
 
@@ -170,8 +177,8 @@ class SecurityProfilesWindow:
         content.pack(fill="both", expand=True)
         content.columnconfigure(1, weight=1)
 
-        # Nome do perfil
-        ttk.Label(content, text="Nome do Perfil:").grid(row=0, column=0, sticky="w", pady=5)
+        # Profile Name
+        ttk.Label(content, text="Profile Name:").grid(row=0, column=0, sticky="w", pady=5)
         name_entry = ttk.Entry(content)
         name_entry.insert(0, current_name)
         name_entry.grid(row=0, column=1, sticky="ew", pady=5)
@@ -193,17 +200,23 @@ class SecurityProfilesWindow:
         mac_checkbox.grid(row=3, column=0, columnspan=2, sticky="w", pady=5)
 
         def submit_edit():
+            """
+            Handles the submission of the edited security profile form.
+            
+            This function validates the form input, prepares the data for submission,
+            and sends the updated security profile to the API.
+            """
             name_valor = name_entry.get()
             password_valor = key_entry.get()
             pmkid_off = "yes" if pmkid_var.get() else "no"
             mac_off = "yes" if mac_auth_var.get() else "no"
 
             if not name_valor or not password_valor:
-                messagebox.showwarning("Campos obrigatórios", "Preencha todos os campos.")
+                messagebox.showwarning("Required Fields", "Please fill in all fields.")
                 return
-
+            
             if not 8 <= len(password_valor) <= 64:
-                messagebox.showwarning("Senha inválida", "A chave WPA2 deve ter entre 8 e 64 caracteres.")
+                messagebox.showwarning("Invalid Password", "WPA2 key must be between 8 and 64 characters.")
                 return
 
             data = {
@@ -230,12 +243,12 @@ class SecurityProfilesWindow:
                 response = requests.put(url, headers=headers, json=data, verify=False)
                 response.raise_for_status()
                 self.load_security_profiles()
-                messagebox.showinfo("Sucesso", "Perfil atualizado com sucesso.")
+                messagebox.showinfo("Success", "Profile updated successfully.")
                 popup.destroy()
             except requests.exceptions.RequestException as e:
-                messagebox.showerror("Erro", f"{e}", parent=popup)
+                messagebox.showerror("Error", f"{e}", parent=popup)
 
-        ttk.Button(content, text="Salvar Alterações", command=submit_edit).grid(row=4, column=0, columnspan=2, pady=15)
+        ttk.Button(content, text="Save Changes", command=submit_edit).grid(row=4, column=0, columnspan=2, pady=15)
 
         popup.transient(self.security_window_frame)
         popup.grab_set()
@@ -254,9 +267,9 @@ class SecurityProfilesWindow:
             response = requests.delete(url, headers=headers, verify=False)
             response.raise_for_status()
             self.load_security_profiles()
-            messagebox.showinfo("Sucesso", "Perfil excluído com sucesso.")
+            messagebox.showinfo("Success", "Profile deleted successfully.")
         except requests.exceptions.RequestException as e:
-            messagebox.showerror("Erro", f"{e}", parent=self.security_window_frame)
+            messagebox.showerror("Error", f"{e}", parent=self.security_window_frame)
 
     def on_double_click_security_profile(self, event):
         selected_item = self.security_profiles_tree.selection()
